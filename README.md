@@ -8,7 +8,7 @@ ActOS turns the web from a human-clicked interface into an agent-executable surf
 
 ## Status
 
-ActOS Runtime **v0** — Pass 2 complete: `@actos/browser-playwright` session driver, screenshots, observe, and stability detector.
+ActOS Runtime **v0** — Pass 3 complete: action router, target resolver, JSONL trace store, and `BrowserRuntime` integration.
 
 Runtime server, SDK, and dashboard remain stub packages until later passes.
 
@@ -50,7 +50,7 @@ pnpm format
 | Package | Description | Status |
 |---------|-------------|--------|
 | `@actos/core` | Zod schemas, types, IDs, error model | Implemented (Pass 1) |
-| `@actos/browser-playwright` | Playwright browser driver, observe, stability | Implemented (Pass 2) |
+| `@actos/browser-playwright` | Playwright driver, observe, action router, trace | Implemented (Pass 2–3) |
 | `@actos/runtime-server` | Local Fastify REST API | Stub (Pass 4) |
 | `@actos/sdk` | TypeScript SDK | Stub (Pass 4) |
 | `@actos/dashboard` | Developer console UI | Stub (Pass 5) |

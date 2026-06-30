@@ -1,3 +1,30 @@
+export const ACTION_FORM_HTML = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Action Test Page</title>
+  </head>
+  <body>
+    <label for="email">Email</label>
+    <input id="email" data-testid="email-input" type="email" placeholder="Enter email" />
+    <label for="status">Status</label>
+    <select id="status">
+      <option value="pending">Pending</option>
+      <option value="done">Done</option>
+    </select>
+    <button type="button" id="search-btn">Search</button>
+    <button type="button" id="duplicate">Go</button>
+    <span>Go</span>
+    <a href="#orders">Orders</a>
+    <div id="result"></div>
+    <script>
+      document.getElementById("search-btn").addEventListener("click", () => {
+        document.getElementById("result").textContent = "searched";
+      });
+    </script>
+  </body>
+</html>`;
+
 export const SIMPLE_FORM_HTML = `<!DOCTYPE html>
 <html lang="en">
   <head>

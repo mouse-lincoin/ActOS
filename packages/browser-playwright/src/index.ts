@@ -25,3 +25,28 @@ export {
   type PlaywrightDriverConfig,
   type BrowserSessionHandle,
 } from "./playwrightDriver.js";
+
+export {
+  resolveTarget,
+  assertTargetActionable,
+  TargetResolverError,
+  type ExecutionTarget,
+} from "./locator.js";
+
+export {
+  JsonlTraceStore,
+  TraceStoreError,
+  buildTraceDir,
+  buildTraceFilePath,
+  type TraceStoreConfig,
+} from "./jsonlTraceStore.js";
+
+export {
+  ActionRouter,
+  redactActionForTrace,
+  type ActionRouterConfig,
+  type ActionExecutionContext,
+  type ActionExecutionDetails,
+} from "./actionRouter.js";
+
+export { BrowserRuntime, type BrowserRuntimeConfig } from "./browserRuntime.js";
