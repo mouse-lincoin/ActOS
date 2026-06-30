@@ -23,6 +23,7 @@ import {
   type ActionExecutionDetails,
 } from "./actionRouter.js";
 import { getArtifactRoot } from "./artifacts.js";
+import { SessionPausedError } from "./handoffErrors.js";
 import { JsonlTraceStore } from "./jsonlTraceStore.js";
 import { observePage } from "./observe.js";
 import {
@@ -62,6 +63,14 @@ export class BrowserRuntime {
     return this.driver.listSessions();
   }
 
+  getArtifactRoot(): string {
+    return this.artifactRoot;
+  }
+
+  getHandoffState(sessionId: string): HandoffState | undefined {
+    return this.handoffs.get(sessionId);
+  }
+
   async createSession(request: CreateSessionRequest = {}): Promise<BrowserSessionHandle> {
     const handle = await this.driver.createSession(request);
 
@@ -82,54 +91,13 @@ export class BrowserRuntime {
   }
 
   async observe(sessionId: string, request: ObserveRequest = {}): Promise<Observation> {
-    const session = this.driver.getSession(sessionId);
-    const tabId = session.activeTabId;
-    if (!tabId) {
-      throw this.sessionError("SESSION_NOT_FOUND", "Session has no active tab");
-    }
-
-    const page = this.driver.getActivePage(sessionId);
-    const observation = await observePage(page, {
-      sessionId,
-      tabId,
-      artifactRoot: this.artifactRoot,
-      ...request,
-    });
-
-    await this.traceStore.append(
-      this.traceStore.createEvent(
-        sessionId,
-        "observe.completed",
-        {
-          observationId: observation.id,
-          page: {
-            url: observation.page.url,
-            title: observation.page.title,
-            stable: observation.page.stable,
-            loading: observation.page.loading,
-          },
-          elementCount: observation.elements.length,
-          artifacts: observation.artifacts?.screenshotPath
-            ? [
-                {
-                  id: createId(ID_PREFIXES.artifact),
-                  type: "screenshot",
-                  path: observation.artifacts.screenshotPath,
-                  mimeType: "image/png",
-                },
-              ]
-            : [],
-        },
-        tabId,
-      ),
-    );
-
-    return observation;
+    this.assertAgentActionsAllowed(sessionId);
+    return this.captureAndTraceObservation(sessionId, request);
   }
 
   async act(sessionId: string, action: AgentAction): Promise<ActionResult> {
     const session = this.driver.getSession(sessionId);
-    if (this.pausedSessions.has(sessionId) || session.status === "paused") {
+    if (this.isPaused(sessionId)) {
       return this.failedActWithTrace(
         sessionId,
         session.activeTabId,
@@ -209,6 +177,7 @@ export class BrowserRuntime {
   }
 
   async checkpoint(sessionId: string, label: string): Promise<Checkpoint> {
+    this.assertAgentActionsAllowed(sessionId);
     const session = this.driver.getSession(sessionId);
     const tabId = session.activeTabId;
     const observation = await this.observe(sessionId, { includeScreenshot: true });
@@ -243,6 +212,7 @@ export class BrowserRuntime {
 
   async pauseForHuman(sessionId: string, request: HandoffRequest): Promise<HandoffState> {
     this.pausedSessions.add(sessionId);
+    this.driver.setSessionStatus(sessionId, "paused");
 
     const handoff: HandoffState = {
       id: createId(ID_PREFIXES.handoff),
@@ -276,7 +246,8 @@ export class BrowserRuntime {
     }
 
     this.pausedSessions.delete(sessionId);
-    const observation = await this.observe(sessionId);
+    this.driver.setSessionStatus(sessionId, "active");
+    const observation = await this.observeAfterResume(sessionId);
     const session = this.driver.getSession(sessionId);
     const tabId = session.activeTabId;
 
@@ -315,6 +286,69 @@ export class BrowserRuntime {
       }),
     );
     await this.driver.closeSession(sessionId);
+  }
+
+  private isPaused(sessionId: string): boolean {
+    return this.pausedSessions.has(sessionId) || this.driver.getSession(sessionId).status === "paused";
+  }
+
+  private assertAgentActionsAllowed(sessionId: string): void {
+    if (this.isPaused(sessionId)) {
+      throw new SessionPausedError();
+    }
+  }
+
+  private async observeAfterResume(sessionId: string): Promise<Observation> {
+    return this.captureAndTraceObservation(sessionId, {});
+  }
+
+  private async captureAndTraceObservation(
+    sessionId: string,
+    request: ObserveRequest,
+  ): Promise<Observation> {
+    const session = this.driver.getSession(sessionId);
+    const tabId = session.activeTabId;
+    if (!tabId) {
+      throw this.sessionError("SESSION_NOT_FOUND", "Session has no active tab");
+    }
+
+    const page = this.driver.getActivePage(sessionId);
+    const observation = await observePage(page, {
+      sessionId,
+      tabId,
+      artifactRoot: this.artifactRoot,
+      ...request,
+    });
+
+    await this.traceStore.append(
+      this.traceStore.createEvent(
+        sessionId,
+        "observe.completed",
+        {
+          observationId: observation.id,
+          page: {
+            url: observation.page.url,
+            title: observation.page.title,
+            stable: observation.page.stable,
+            loading: observation.page.loading,
+          },
+          elementCount: observation.elements.length,
+          artifacts: observation.artifacts?.screenshotPath
+            ? [
+                {
+                  id: createId(ID_PREFIXES.artifact),
+                  type: "screenshot",
+                  path: observation.artifacts.screenshotPath,
+                  mimeType: "image/png",
+                },
+              ]
+            : [],
+        },
+        tabId,
+      ),
+    );
+
+    return observation;
   }
 
   private buildActionTracePayload(

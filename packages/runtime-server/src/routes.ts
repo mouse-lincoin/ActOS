@@ -1,3 +1,6 @@
+import { createReadStream } from "node:fs";
+import { access } from "node:fs/promises";
+
 import type { FastifyInstance } from "fastify";
 
 import {
@@ -8,6 +11,7 @@ import {
   PauseHandoffResponseSchema,
   ResumeHandoffResponseSchema,
 } from "@actos/core";
+import { buildScreenshotPath } from "@actos/browser-playwright";
 
 import { badRequest, toHttpError } from "./errors.js";
 import type { ActOSRuntimeService } from "./runtime.js";
@@ -22,6 +26,7 @@ import {
   ObserveRequestSchema,
   SessionParamsSchema,
 } from "./schemas.js";
+import { z } from "zod";
 
 function parseParams(params: unknown) {
   const parsed = SessionParamsSchema.safeParse(params);
@@ -39,7 +44,25 @@ function parseBody<T>(schema: { safeParse: (value: unknown) => { success: true; 
   return parsed.data;
 }
 
-export function registerRoutes(app: FastifyInstance, runtime: ActOSRuntimeService): void {
+export type RegisterRouteOptions = {
+  artifactRoot: string;
+};
+
+function parseScreenshotParams(params: unknown) {
+  const parsed = SessionParamsSchema.extend({
+    observationId: z.string().min(1),
+  }).safeParse(params);
+  if (!parsed.success) {
+    badRequest("Invalid screenshot params", { issues: parsed.error.issues });
+  }
+  return parsed.data;
+}
+
+export function registerRoutes(
+  app: FastifyInstance,
+  runtime: ActOSRuntimeService,
+  options: RegisterRouteOptions,
+): void {
   app.post("/sessions", async (request) => {
     const body = parseBody(CreateSessionRequestSchema, request.body);
     const handle = await runtime.createSession(body);
@@ -137,6 +160,18 @@ export function registerRoutes(app: FastifyInstance, runtime: ActOSRuntimeServic
       assertSessionExists(runtime, sessionId);
       const events = await runtime.getTrace(sessionId);
       return GetTraceResponseSchema.parse({ events });
+    } catch (error) {
+      throw toHttpError(error);
+    }
+  });
+
+  app.get("/sessions/:sessionId/artifacts/screenshot/:observationId", async (request, reply) => {
+    const { sessionId, observationId } = parseScreenshotParams(request.params);
+    try {
+      assertSessionExists(runtime, sessionId);
+      const screenshotPath = buildScreenshotPath(options.artifactRoot, sessionId, observationId);
+      await access(screenshotPath);
+      return reply.type("image/png").send(createReadStream(screenshotPath));
     } catch (error) {
       throw toHttpError(error);
     }

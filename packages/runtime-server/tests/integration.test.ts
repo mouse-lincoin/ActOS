@@ -81,10 +81,44 @@ describe("runtime-server integration", () => {
     });
     expect(pauseResponse.status).toBe(200);
 
+    const pausedSessionResponse = await fetch(`${baseUrl}/sessions/${session.id}`);
+    expect(pausedSessionResponse.status).toBe(200);
+    const pausedSessionBody = (await pausedSessionResponse.json()) as { session: { status: string } };
+    expect(pausedSessionBody.session.status).toBe("paused");
+
+    const pausedObserveResponse = await fetch(`${baseUrl}/sessions/${session.id}/observe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ includeScreenshot: false }),
+    });
+    expect(pausedObserveResponse.status).toBe(409);
+    expect(
+      ((await pausedObserveResponse.json()) as { error: { code: string } }).error.code,
+    ).toBe("SESSION_PAUSED");
+
+    const pausedActResponse = await fetch(`${baseUrl}/sessions/${session.id}/act`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: { type: "click", target: { role: "button", name: "Search" } },
+      }),
+    });
+    expect(pausedActResponse.status).toBe(200);
+    const pausedActBody = (await pausedActResponse.json()) as {
+      result: { status: string; error?: { code: string } };
+    };
+    expect(pausedActBody.result.status).toBe("failed");
+    expect(pausedActBody.result.error?.code).toBe("SESSION_PAUSED");
+
     const resumeResponse = await fetch(`${baseUrl}/sessions/${session.id}/handoff/resume`, {
       method: "POST",
     });
     expect(resumeResponse.status).toBe(200);
+
+    const activeSessionResponse = await fetch(`${baseUrl}/sessions/${session.id}`);
+    expect(
+      ((await activeSessionResponse.json()) as { session: { status: string } }).session.status,
+    ).toBe("active");
 
     const finalTraceResponse = await fetch(`${baseUrl}/sessions/${session.id}/trace`);
     const finalTypes = ((await finalTraceResponse.json()) as { events: Array<{ type: string }> }).events.map(
@@ -93,6 +127,21 @@ describe("runtime-server integration", () => {
     expect(finalTypes).toContain("checkpoint.created");
     expect(finalTypes).toContain("handoff.started");
     expect(finalTypes).toContain("handoff.resumed");
+    expect(finalTypes).toContain("action.failed");
+
+    const observeResponse = await fetch(`${baseUrl}/sessions/${session.id}/observe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ includeScreenshot: true }),
+    });
+    expect(observeResponse.status).toBe(200);
+    const observation = (await observeResponse.json()) as { observation: { id: string } };
+
+    const screenshotResponse = await fetch(
+      `${baseUrl}/sessions/${session.id}/artifacts/screenshot/${observation.observation.id}`,
+    );
+    expect(screenshotResponse.status).toBe(200);
+    expect(screenshotResponse.headers.get("content-type")).toMatch(/image\/png/);
 
     await fetch(`${baseUrl}/sessions/${session.id}`, { method: "DELETE" });
   });
