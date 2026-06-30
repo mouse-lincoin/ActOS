@@ -1,0 +1,4 @@
+node_modules
+dist
+.actos
+pnpm-lock.yaml
