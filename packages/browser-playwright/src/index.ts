@@ -1,2 +1,27 @@
-/** @actos/browser-playwright — stub for Pass 1. Implemented in Pass 2. */
-export const BROWSER_PLAYWRIGHT_STUB = true;
+export {
+  DEFAULT_ARTIFACT_ROOT,
+  getArtifactRoot,
+  buildSessionArtifactDir,
+  buildScreenshotPath,
+  buildScreenshotDir,
+  type ArtifactConfig,
+} from "./artifacts.js";
+
+export { captureScreenshot, type CaptureScreenshotOptions } from "./screenshots.js";
+
+export {
+  STABILITY_DEFAULTS,
+  waitForPageStability,
+  isPageStable,
+  type StabilityOptions,
+  type StabilityResult,
+} from "./stability.js";
+
+export { observePage, type ObservePageOptions } from "./observe.js";
+
+export {
+  PlaywrightSessionDriver,
+  PlaywrightDriverError,
+  type PlaywrightDriverConfig,
+  type BrowserSessionHandle,
+} from "./playwrightDriver.js";

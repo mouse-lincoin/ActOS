@@ -4,6 +4,10 @@ export const BrowserNameSchema = z.enum(["chromium", "firefox", "webkit"]);
 export const SessionStatusSchema = z.enum(["active", "paused", "closed", "failed"]);
 export const IsolationModeSchema = z.enum(["strict", "shared"]);
 
+export type BrowserName = z.infer<typeof BrowserNameSchema>;
+export type SessionStatus = z.infer<typeof SessionStatusSchema>;
+export type IsolationMode = z.infer<typeof IsolationModeSchema>;
+
 export const SessionSchema = z.object({
   id: z.string(),
   status: SessionStatusSchema,
