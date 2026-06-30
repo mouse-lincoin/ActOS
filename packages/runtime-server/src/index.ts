@@ -1,2 +1,16 @@
-/** @actos/runtime-server — stub for Pass 1. Implemented in Pass 4. */
-export const RUNTIME_SERVER_STUB = true;
+export { ActOSHttpError, errorResponse, type ErrorResponse } from "./errors.js";
+export { asRuntimeService, assertSessionExists, type ActOSRuntimeService } from "./runtime.js";
+export {
+  ActRequestBodySchema,
+  ActResponseSchema,
+  ListSessionsResponseSchema,
+  SessionParamsSchema,
+} from "./schemas.js";
+export { registerRoutes } from "./routes.js";
+export {
+  createActOSServer,
+  startActOSServer,
+  type ActOSServer,
+  type CreateActOSServerOptions,
+  type StartActOSServerOptions,
+} from "./server.js";
