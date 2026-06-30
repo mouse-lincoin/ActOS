@@ -248,6 +248,10 @@ export class PlaywrightSessionDriver {
     return this.sessions.has(sessionId);
   }
 
+  listSessions(): Session[] {
+    return Array.from(this.sessions.values()).map((state) => ({ ...state.session }));
+  }
+
   private getSessionState(sessionId: string): BrowserSessionState {
     const state = this.sessions.get(sessionId);
     if (!state) {

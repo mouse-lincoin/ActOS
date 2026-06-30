@@ -10,7 +10,9 @@ import {
   type HandoffState,
   type Observation,
   type ObserveRequest,
+  type ResumeHandoffResponse,
   type RuntimeError,
+  type Session,
   type TraceEvent,
 } from "@actos/core";
 
@@ -35,6 +37,7 @@ export class BrowserRuntime {
   private readonly traceStore: JsonlTraceStore;
   private readonly artifactRoot: string;
   private readonly pausedSessions = new Set<string>();
+  private readonly handoffs = new Map<string, HandoffState>();
 
   constructor(config: BrowserRuntimeConfig = {}) {
     this.artifactRoot = getArtifactRoot(config);
@@ -48,6 +51,14 @@ export class BrowserRuntime {
 
   getDriver(): PlaywrightSessionDriver {
     return this.driver;
+  }
+
+  getSession(sessionId: string): Session {
+    return this.driver.getSession(sessionId);
+  }
+
+  listSessions(): Session[] {
+    return this.driver.listSessions();
   }
 
   async createSession(request: CreateSessionRequest = {}): Promise<BrowserSessionHandle> {
@@ -236,6 +247,8 @@ export class BrowserRuntime {
       startedAt: new Date().toISOString(),
     };
 
+    this.handoffs.set(sessionId, handoff);
+
     await this.traceStore.append(
       this.traceStore.createEvent(sessionId, "handoff.started", {
         handoff,
@@ -246,11 +259,50 @@ export class BrowserRuntime {
     return handoff;
   }
 
+  async resume(sessionId: string): Promise<ResumeHandoffResponse> {
+    if (!this.driver.hasSession(sessionId)) {
+      throw this.sessionError("SESSION_NOT_FOUND", `Session not found: ${sessionId}`);
+    }
+
+    const previous = this.handoffs.get(sessionId);
+    if (!previous) {
+      throw this.sessionError("SESSION_NOT_FOUND", `No handoff found for session: ${sessionId}`);
+    }
+
+    this.pausedSessions.delete(sessionId);
+    const observation = await this.observe(sessionId);
+    const session = this.driver.getSession(sessionId);
+    const tabId = session.activeTabId;
+
+    const handoff: HandoffState = {
+      ...previous,
+      status: "resumed",
+      resumedAt: new Date().toISOString(),
+    };
+    this.handoffs.set(sessionId, handoff);
+
+    await this.traceStore.append(
+      this.traceStore.createEvent(
+        sessionId,
+        "handoff.resumed",
+        {
+          handoff,
+          observationId: observation.id,
+        },
+        tabId,
+      ),
+    );
+
+    return { handoff, observation };
+  }
+
   async getTrace(sessionId: string): Promise<TraceEvent[]> {
     return this.traceStore.getTrace(sessionId);
   }
 
   async closeSession(sessionId: string): Promise<void> {
+    this.pausedSessions.delete(sessionId);
+    this.handoffs.delete(sessionId);
     await this.traceStore.append(
       this.traceStore.createEvent(sessionId, "session.closed", {
         reason: "user_requested",

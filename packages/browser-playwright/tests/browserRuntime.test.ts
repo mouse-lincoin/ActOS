@@ -81,7 +81,7 @@ describe("BrowserRuntime integration", () => {
     expect(trace.some((event) => event.type === "error.raised")).toBe(true);
   });
 
-  it("supports press, scroll, and checkpoint trace events", async () => {
+  it("supports press, scroll, checkpoint, and resume handoff", async () => {
     const handle = await openSession();
 
     await runtime.act(handle.session.id, {
@@ -107,8 +107,14 @@ describe("BrowserRuntime integration", () => {
     const checkpoint = await runtime.checkpoint(handle.session.id, "after-actions");
     expect(checkpoint.label).toBe("after-actions");
 
+    await runtime.pauseForHuman(handle.session.id, { reason: "manual step" });
+    const resumed = await runtime.resume(handle.session.id);
+    expect(resumed.handoff.status).toBe("resumed");
+    expect(resumed.observation.id.startsWith("obs_")).toBe(true);
+
     const trace = await runtime.getTrace(handle.session.id);
     expect(trace.some((event) => event.type === "checkpoint.created")).toBe(true);
+    expect(trace.some((event) => event.type === "handoff.resumed")).toBe(true);
     if (checkpoint.screenshotPath) {
       await access(checkpoint.screenshotPath);
     }
