@@ -67,6 +67,33 @@ describe("runtime-server integration", () => {
     expect(types).toContain("action.started");
     expect(types).toContain("action.completed");
 
+    const checkpointResponse = await fetch(`${baseUrl}/sessions/${session.id}/checkpoints`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ label: "api-checkpoint" }),
+    });
+    expect(checkpointResponse.status).toBe(200);
+
+    const pauseResponse = await fetch(`${baseUrl}/sessions/${session.id}/handoff/pause`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: "manual" }),
+    });
+    expect(pauseResponse.status).toBe(200);
+
+    const resumeResponse = await fetch(`${baseUrl}/sessions/${session.id}/handoff/resume`, {
+      method: "POST",
+    });
+    expect(resumeResponse.status).toBe(200);
+
+    const finalTraceResponse = await fetch(`${baseUrl}/sessions/${session.id}/trace`);
+    const finalTypes = ((await finalTraceResponse.json()) as { events: Array<{ type: string }> }).events.map(
+      (event) => event.type,
+    );
+    expect(finalTypes).toContain("checkpoint.created");
+    expect(finalTypes).toContain("handoff.started");
+    expect(finalTypes).toContain("handoff.resumed");
+
     await fetch(`${baseUrl}/sessions/${session.id}`, { method: "DELETE" });
   });
 });

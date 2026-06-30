@@ -1,5 +1,6 @@
 import {
   createId,
+  createTimestamp,
   ID_PREFIXES,
   runtimeError,
   type ActionResult,
@@ -129,15 +130,20 @@ export class BrowserRuntime {
   async act(sessionId: string, action: AgentAction): Promise<ActionResult> {
     const session = this.driver.getSession(sessionId);
     if (this.pausedSessions.has(sessionId) || session.status === "paused") {
-      return this.failedActionResult(sessionId, session.activeTabId ?? "tab_unknown", action, {
-        code: "SESSION_PAUSED",
-        message: "Session is paused for human handoff",
-      });
+      return this.failedActWithTrace(
+        sessionId,
+        session.activeTabId,
+        action,
+        {
+          code: "SESSION_PAUSED",
+          message: "Session is paused for human handoff",
+        },
+      );
     }
 
     const tabId = session.activeTabId;
     if (!tabId) {
-      return this.failedActionResult(sessionId, "tab_unknown", action, {
+      return this.failedActWithTrace(sessionId, undefined, action, {
         code: "SESSION_NOT_FOUND",
         message: "Session has no active tab",
       });
@@ -329,26 +335,60 @@ export class BrowserRuntime {
     };
   }
 
-  private failedActionResult(
+  private async failedActWithTrace(
     sessionId: string,
-    tabId: string,
+    tabId: string | undefined,
     action: AgentAction,
     errorInput: { code: "SESSION_PAUSED" | "SESSION_NOT_FOUND"; message: string },
-  ): ActionResult {
+  ): Promise<ActionResult> {
+    const resolvedTabId = tabId ?? "tab_unknown";
+    const actionId = createId(ID_PREFIXES.action);
     const error = runtimeError({
       code: errorInput.code,
       message: errorInput.message,
     });
 
-    return {
-      id: createId(ID_PREFIXES.action),
+    const result: ActionResult = {
+      id: actionId,
       sessionId,
-      tabId,
+      tabId: resolvedTabId,
       status: "failed",
       action,
       error,
-      timestamp: new Date().toISOString(),
+      timestamp: createTimestamp(),
     };
+
+    await this.traceStore.append(
+      this.traceStore.createEvent(
+        sessionId,
+        "action.started",
+        {
+          actionId,
+          action: redactActionForTrace(action),
+        },
+        tabId,
+      ),
+    );
+
+    await this.traceStore.append(
+      this.traceStore.createEvent(
+        sessionId,
+        "action.failed",
+        {
+          actionId,
+          action: redactActionForTrace(action),
+          error,
+          durationMs: 0,
+        },
+        tabId,
+      ),
+    );
+
+    await this.traceStore.append(
+      this.traceStore.createEvent(sessionId, "error.raised", { error }, tabId),
+    );
+
+    return result;
   }
 
   private sessionError(code: "SESSION_NOT_FOUND", message: string): Error {
