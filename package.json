@@ -7,6 +7,8 @@
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "test:e2e": "playwright test",
+    "demo": "pnpm --filter @actos/mock-admin build && pnpm --filter @actos/mock-admin demo",
     "lint": "pnpm -r lint",
     "format": "prettier --write ."
   },
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
+    "@playwright/test": "^1.52.0",
     "@types/node": "^22.15.29",
     "eslint": "^9.28.0",
     "prettier": "^3.5.3",
