@@ -8,9 +8,9 @@ ActOS turns the web from a human-clicked interface into an agent-executable surf
 
 ## Status
 
-ActOS Runtime **v0** — Pass 1 complete: monorepo foundation and `@actos/core` contracts.
+ActOS Runtime **v0** — Pass 2 complete: `@actos/browser-playwright` session driver, screenshots, observe, and stability detector.
 
-Browser automation, runtime server, SDK, and dashboard are stub packages until later passes.
+Runtime server, SDK, and dashboard remain stub packages until later passes.
 
 ---
 
@@ -33,6 +33,9 @@ pnpm build
 # Run all tests
 pnpm test
 
+# Install Playwright Chromium (required once for browser-playwright tests)
+pnpm --filter @actos/browser-playwright exec playwright install chromium
+
 # Lint all packages
 pnpm lint
 
@@ -47,7 +50,7 @@ pnpm format
 | Package | Description | Status |
 |---------|-------------|--------|
 | `@actos/core` | Zod schemas, types, IDs, error model | Implemented (Pass 1) |
-| `@actos/browser-playwright` | Playwright browser driver | Stub (Pass 2) |
+| `@actos/browser-playwright` | Playwright browser driver, observe, stability | Implemented (Pass 2) |
 | `@actos/runtime-server` | Local Fastify REST API | Stub (Pass 4) |
 | `@actos/sdk` | TypeScript SDK | Stub (Pass 4) |
 | `@actos/dashboard` | Developer console UI | Stub (Pass 5) |

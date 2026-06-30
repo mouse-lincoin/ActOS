@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Playwright browser driver for ActOS Runtime v0 (stub)",
+  "description": "Playwright browser driver for ActOS Runtime v0",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -15,8 +15,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
+    "pretest": "playwright install chromium",
     "test": "vitest run",
     "lint": "eslint src tests"
+  },
+  "dependencies": {
+    "@actos/core": "workspace:*",
+    "playwright": "^1.52.0"
   },
   "devDependencies": {
     "vitest": "^3.2.1"
