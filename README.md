@@ -8,9 +8,7 @@ ActOS turns the web from a human-clicked interface into an agent-executable surf
 
 ## Status
 
-ActOS Runtime **v0** — Pass 4 complete: Fastify REST server (`@actos/runtime-server`) and TypeScript SDK (`@actos/sdk`).
-
-Dashboard remains a stub package until Pass 5.
+ActOS Runtime **v0** — Pass 5 complete: human handoff (`pause`/`resume`) and developer dashboard (`@actos/dashboard`).
 
 ---
 
@@ -39,6 +37,9 @@ pnpm --filter @actos/browser-playwright exec playwright install chromium
 # Start the local runtime server (default http://127.0.0.1:8787)
 pnpm --filter @actos/runtime-server start
 
+# Start the developer dashboard (default http://127.0.0.1:5173)
+pnpm --filter @actos/dashboard dev
+
 # Lint all packages
 pnpm lint
 
@@ -56,7 +57,7 @@ pnpm format
 | `@actos/browser-playwright` | Playwright driver, observe, action router, trace | Implemented (Pass 2–3) |
 | `@actos/runtime-server` | Local Fastify REST API | Implemented (Pass 4) |
 | `@actos/sdk` | TypeScript SDK | Implemented (Pass 4) |
-| `@actos/dashboard` | Developer console UI | Stub (Pass 5) |
+| `@actos/dashboard` | Developer console UI | Implemented (Pass 5) |
 
 ---
 

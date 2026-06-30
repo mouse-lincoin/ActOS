@@ -57,6 +57,19 @@ describe("ActOSClient", () => {
     const trace = await session.getTrace();
     expect(trace.some((event) => event.type === "action.completed")).toBe(true);
 
+    const checkpoint = await session.checkpoint("sdk-checkpoint");
+    expect(checkpoint.label).toBe("sdk-checkpoint");
+
+    const handoff = await session.pauseForHuman({ reason: "sdk pause" });
+    expect(handoff.status).toBe("paused");
+
+    const resumed = await session.resume();
+    expect(resumed.handoff.status).toBe("resumed");
+    expect(resumed.observation.id.startsWith("obs_")).toBe(true);
+
+    const current = await client.getSession(session.id);
+    expect(current.id).toBe(session.id);
+
     await session.close();
   });
 

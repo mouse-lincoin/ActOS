@@ -124,6 +124,58 @@ describe("createActOSServer", () => {
     expect(traceResponse.statusCode).toBe(200);
     expect(traceResponse.json().events).toHaveLength(1);
 
+    const getSessionResponse = await app.inject({
+      method: "GET",
+      url: "/sessions/ses_test",
+    });
+    expect(getSessionResponse.statusCode).toBe(200);
+    expect(getSessionResponse.json().session.id).toBe("ses_test");
+
+    const observeResponse = await app.inject({
+      method: "POST",
+      url: "/sessions/ses_test/observe",
+      payload: { includeScreenshot: false },
+    });
+    expect(observeResponse.statusCode).toBe(200);
+    expect(observeResponse.json().observation.id).toBe("obs_test");
+
+    const actResponse = await app.inject({
+      method: "POST",
+      url: "/sessions/ses_test/act",
+      payload: { action: { type: "wait", ms: 0 } },
+    });
+    expect(actResponse.statusCode).toBe(200);
+    expect(actResponse.json().result.status).toBe("success");
+
+    const checkpointResponse = await app.inject({
+      method: "POST",
+      url: "/sessions/ses_test/checkpoints",
+      payload: { label: "after-search" },
+    });
+    expect(checkpointResponse.statusCode).toBe(200);
+    expect(checkpointResponse.json().checkpoint.label).toBe("test");
+
+    const pauseResponse = await app.inject({
+      method: "POST",
+      url: "/sessions/ses_test/handoff/pause",
+      payload: { reason: "2FA required" },
+    });
+    expect(pauseResponse.statusCode).toBe(200);
+    expect(pauseResponse.json().handoff.status).toBe("paused");
+
+    const resumeResponse = await app.inject({
+      method: "POST",
+      url: "/sessions/ses_test/handoff/resume",
+    });
+    expect(resumeResponse.statusCode).toBe(200);
+    expect(resumeResponse.json().handoff.status).toBe("resumed");
+
+    const deleteResponse = await app.inject({
+      method: "DELETE",
+      url: "/sessions/ses_test",
+    });
+    expect(deleteResponse.statusCode).toBe(204);
+
     await app.close();
   });
 

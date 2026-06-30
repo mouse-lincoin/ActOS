@@ -9,6 +9,7 @@ import {
   type IsolationMode,
   type RuntimeError,
   type Session,
+  type SessionStatus,
 } from "@actos/core";
 import {
   chromium,
@@ -250,6 +251,13 @@ export class PlaywrightSessionDriver {
 
   listSessions(): Session[] {
     return Array.from(this.sessions.values()).map((state) => ({ ...state.session }));
+  }
+
+  setSessionStatus(sessionId: string, status: SessionStatus): Session {
+    const state = this.getSessionState(sessionId);
+    state.session.status = status;
+    state.session.updatedAt = createTimestamp();
+    return { ...state.session };
   }
 
   private getSessionState(sessionId: string): BrowserSessionState {

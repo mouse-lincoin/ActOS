@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
 
 import { fromUnknownError, runtimeError } from "@actos/core";
 import { BrowserRuntime } from "@actos/browser-playwright";
@@ -18,6 +19,7 @@ export type CreateActOSServerOptions = {
 export type ActOSServer = {
   app: FastifyInstance;
   runtime: ActOSRuntimeService;
+  browserRuntime: BrowserRuntime;
 };
 
 export async function createActOSServer(options: CreateActOSServerOptions = {}): Promise<ActOSServer> {
@@ -29,9 +31,14 @@ export async function createActOSServer(options: CreateActOSServerOptions = {}):
     });
 
   const runtime = options.runtime ?? asRuntimeService(browserRuntime);
+  const artifactRoot = options.artifactRoot ?? browserRuntime.getArtifactRoot();
 
   const app = Fastify({
     logger: options.logger ?? false,
+  });
+
+  await app.register(cors, {
+    origin: true,
   });
 
   app.setErrorHandler((error, _request, reply) => {
@@ -67,9 +74,9 @@ export async function createActOSServer(options: CreateActOSServerOptions = {}):
     return reply.status(httpError.statusCode).send(errorResponse(httpError.runtimeError));
   });
 
-  registerRoutes(app, runtime);
+  registerRoutes(app, runtime, { artifactRoot });
 
-  return { app, runtime };
+  return { app, runtime, browserRuntime };
 }
 
 export type StartActOSServerOptions = CreateActOSServerOptions & {
@@ -78,9 +85,9 @@ export type StartActOSServerOptions = CreateActOSServerOptions & {
 };
 
 export async function startActOSServer(options: StartActOSServerOptions = {}): Promise<ActOSServer & { url: string }> {
-  const { app, runtime } = await createActOSServer(options);
+  const { app, runtime, browserRuntime } = await createActOSServer(options);
   const host = options.host ?? "127.0.0.1";
   const port = options.port ?? 8787;
   const url = await app.listen({ host, port });
-  return { app, runtime, url };
+  return { app, runtime, browserRuntime, url };
 }

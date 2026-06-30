@@ -50,3 +50,5 @@ export {
 } from "./actionRouter.js";
 
 export { BrowserRuntime, type BrowserRuntimeConfig } from "./browserRuntime.js";
+
+export { SessionPausedError } from "./handoffErrors.js";

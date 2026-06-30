@@ -1,4 +1,5 @@
 import { fromUnknownError, runtimeError, type RuntimeError } from "@actos/core";
+import { SessionPausedError } from "@actos/browser-playwright";
 
 export class ActOSHttpError extends Error {
   readonly statusCode: number;
@@ -39,6 +40,10 @@ export function badRequest(message: string, details?: Record<string, unknown>): 
 export function toHttpError(error: unknown): ActOSHttpError {
   if (error instanceof ActOSHttpError) {
     return error;
+  }
+
+  if (error instanceof SessionPausedError) {
+    return new ActOSHttpError(409, error.runtimeError);
   }
 
   const message = error instanceof Error ? error.message : String(error);

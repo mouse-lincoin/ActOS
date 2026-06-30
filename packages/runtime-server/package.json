@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
-    "pretest": "playwright install chromium",
+    "pretest": "pnpm --filter @actos/browser-playwright exec playwright install chromium",
     "start": "node dist/cli.js",
     "test": "vitest run",
     "lint": "eslint src tests"
@@ -23,6 +23,7 @@
   "dependencies": {
     "@actos/browser-playwright": "workspace:*",
     "@actos/core": "workspace:*",
+    "@fastify/cors": "^10.0.2",
     "fastify": "^5.4.0",
     "zod": "^3.25.42"
   },

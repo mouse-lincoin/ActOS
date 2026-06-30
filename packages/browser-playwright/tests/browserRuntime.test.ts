@@ -114,6 +114,7 @@ describe("BrowserRuntime integration", () => {
 
     const trace = await runtime.getTrace(handle.session.id);
     expect(trace.some((event) => event.type === "checkpoint.created")).toBe(true);
+    expect(trace.some((event) => event.type === "handoff.started")).toBe(true);
     expect(trace.some((event) => event.type === "handoff.resumed")).toBe(true);
     if (checkpoint.screenshotPath) {
       await access(checkpoint.screenshotPath);
@@ -136,5 +137,35 @@ describe("BrowserRuntime integration", () => {
 
     expect(action.secret).toBe(true);
     expect(action.value).toBe("[REDACTED]");
+  });
+
+  it("writes trace when act is rejected while session is paused", async () => {
+    const handle = await openSession();
+    await runtime.pauseForHuman(handle.session.id, { reason: "manual review" });
+
+    const result = await runtime.act(handle.session.id, {
+      type: "click",
+      target: { role: "button", name: "Search" },
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.error?.code).toBe("SESSION_PAUSED");
+
+    const trace = await runtime.getTrace(handle.session.id);
+    expect(trace.some((event) => event.type === "action.started")).toBe(true);
+    expect(trace.some((event) => event.type === "action.failed")).toBe(true);
+    expect(trace.some((event) => event.type === "error.raised")).toBe(true);
+
+    await runtime.resume(handle.session.id);
+  });
+
+  it("writes session.closed when closing a session", async () => {
+    const handle = await openSession();
+    const sessionIdToClose = handle.session.id;
+    sessionId = undefined;
+
+    await runtime.closeSession(sessionIdToClose);
+    const trace = await runtime.getTrace(sessionIdToClose);
+    expect(trace.some((event) => event.type === "session.closed")).toBe(true);
   });
 });

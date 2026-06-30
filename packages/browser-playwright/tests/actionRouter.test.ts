@@ -101,6 +101,22 @@ describe("ActionRouter", () => {
     expect(page.url()).toContain("example.com");
   });
 
+  it("waits for page stability", async () => {
+    const { session, page, tabId } = await openActionPage();
+    const router = new ActionRouter({ artifactRoot });
+
+    const outcome = await router.execute({
+      page,
+      sessionId: session.id,
+      tabId,
+      action: { type: "wait", until: { type: "pageStable" } },
+    });
+
+    expect(outcome.result.status).toBe("success");
+    expect(outcome.result.observationBeforeId).toBeDefined();
+    expect(outcome.result.observationAfterId).toBeDefined();
+  });
+
   it("returns structured failure for missing target", async () => {
     const { session, page, tabId } = await openActionPage();
     const router = new ActionRouter({ artifactRoot });
